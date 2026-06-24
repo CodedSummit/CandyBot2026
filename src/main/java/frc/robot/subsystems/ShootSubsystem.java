@@ -36,84 +36,94 @@ import frc.robot.Constants;
 
 @Logged
 public class ShootSubsystem extends SubsystemBase {
-  private GenericEntry nt_intakeRPM;
-  private final SparkFlex intakeWheels = new SparkFlex(canbus id);
+  private final SparkFlex shooterMotor = new SparkFlex(Constants.ShooterConstants.kShootMotorCanbusID, MotorType.kBrushless);
 
-  private final DigitalInput floorInput = new DigitalInput(0);
-  private final DutyCycleEncoder intakeArmPosition = new DutyCycleEncoder(diginput, 360, offset);
+  private GenericEntry nt_shooterSpeed;
+  private GenericEntry nt_shooterGainRPM;
+  private GenericEntry nt_shooterRPM;
 
-  private PIDController intakeWheelsPID = new PIDController(0.0001, 0, 0);
+  private PIDController shooterPID = new PIDController(0.0001, 0, 0);
   private boolean isControllingForRPM = false;
  
   public ShootSubsystem() {
     this.initialize();
   }
-
-  public void initialize() {}
+  public void initialize() {
+    setupShuffleboard();
+  }
 
   public Command runWheelsWithPID(){
-    return this.startEnd(()-> spinUpWheelsWithPID(), ()-> stopIntake());
+    return this.startEnd(()-> spinUpWheelsWithPID(), ()-> stopShooting());
   }
 
   public void spinUpWheelsWithPID(){
     isControllingForRPM = true;
   }
 
-  public Command ManualRunIntake() {
-    return runOnce(() -> intakeWheels.set(getIntakeSpeed()));
+  public boolean shooterMotorRunning() {
+    return (shooterMotor.get() != 0.0);
   }
 
-  public Command ManualStopIntake() {
-    return runOnce(() -> intakeWheels.set(0));
-  }
-
-  public boolean intakeWheelsRunning() {
-    return (intakeWheels.get() != 0.0);
-  }
-
-  public void stopIntakeWheels() {
+  public void stopShooterMotor() {
     isControllingForRPM = false;
-    intakeWheelsPID.reset();
-    intakeWheels.set(0);
+    shooterPID.reset();
+    shooterMotor.set(0);
   }
 
-  public void startIntakeWheels() {
-    intakeWheels.set(getIntakeSpeed());
+  public void startShooting() {
+    shooterMotor.set(getShooterSpeed());
   }
 
-  public Command Intake() {
+  public Command Shoot() {
     return this.startEnd(
-        () -> intakeWheels.set(getIntakeSpeed()), // this is set to negative because the controller is inverted
-        () -> intakeWheels.set(0));
-  }
-
-  @Logged
-  public Command Outtake() {
-    return this.startEnd(
-        () -> intakeWheels.set(-getIntakeSpeed()),
-        () -> intakeWheels.set(0));
+        () -> shooterMotor.set(getShooterSpeed()), // this is set to negative because the controller is inverted
+        () -> shooterMotor.set(0));
   }
 
   @Override
   public void periodic() {
       if(isControllingForRPM){
-        double current_rpm = intakeWheels.getEncoder().getVelocity();
+        double current_rpm = shooterMotor.getEncoder().getVelocity();
         double target_rpm = getWheelsRPM();
         double velocityFF = target_rpm *(0.0001754 * getGain() * 12); //12 because volt control
 
-        intakeWheelsPID.setSetpoint(getWheelsRPM());
-        double wheelsPID = intakeWheelsPID.calculate(current_rpm);
-        intakeWheels.setVoltage(MathUtil.clamp(velocityFF + wheelsPID, 0, 14));
+        shooterPID.setSetpoint(getWheelsRPM());
+        double conveyorPID = shooterPID.calculate(current_rpm);
+        shooterMotor.setVoltage(MathUtil.clamp(velocityFF + conveyorPID, 0, 14));
       }
   }
 
-  public void stopIntake() {
+  public void stopShooting() {
     isControllingForRPM = false;
-    intakeWheelsPID.reset();
-    intakeWheels.set(0);
+    shooterPID.reset();
+    shooterMotor.set(0);
   }
 
+  public double getGain() {
+    return nt_shooterGainRPM.getDouble(Constants.ShooterConstants.kGainRPM);
+  }
+  public double getShooterSpeed() {
+    return nt_shooterSpeed.getDouble(Constants.ShooterConstants.kShootSpeed);
+  }
   public double getWheelsRPM() {
-    return nt_intakeRPM.getDouble(intake rpm);
+    return nt_shooterRPM.getDouble(Constants.ShooterConstants.kShootRPM);
+  }
+
+  private void setupShuffleboard() {
+    ShuffleboardTab tab = Shuffleboard.getTab("Shooter");
+
+    nt_shooterSpeed = tab.addPersistent("Shooter Speed", Constants.ShooterConstants.kShootSpeed)
+        .withSize(3, 1)
+        .withWidget(BuiltInWidgets.kNumberSlider)
+        .withProperties(Map.of("min", 0, "max", 1))
+        .getEntry();
+
+    nt_shooterGainRPM = tab.addPersistent("RPM Gain", Constants.ShooterConstants.kGainRPM)
+    .getEntry();
+
+    nt_shooterRPM = tab.addPersistent("Shooter RPM", Constants.ShooterConstants.kShootRPM)
+    .getEntry();
+    
+    tab.add("Shooter Wheels PID", shooterPID);
   }
 }

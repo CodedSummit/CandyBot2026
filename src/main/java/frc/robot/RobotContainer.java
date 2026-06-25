@@ -4,12 +4,15 @@
 
 package frc.robot;
 
+import frc.robot.Constants.HopperConstants;
 import frc.robot.Constants.OperatorConstants;
 import frc.robot.commands.Autos;
+import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.ShootSubsystem;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 
@@ -22,6 +25,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 @Logged
 public class RobotContainer {
   private final ShootSubsystem shootSubsystem = new ShootSubsystem();
+  private final HopperSubsystem hopperSubsystem = new HopperSubsystem();
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController m_driverController =
@@ -43,7 +47,11 @@ public class RobotContainer {
    * joysticks}.
    */
   private void configureBindings() {
-    m_driverController.a().onTrue(shootSubsystem.toggleShoot());
+    m_driverController.a().onTrue(new ParallelCommandGroup(
+      shootSubsystem.toggleShoot(),
+      hopperSubsystem.toggleSpin()
+    ));
+    m_driverController.b().onTrue(hopperSubsystem.toggleSpin());
   }
 
   /**

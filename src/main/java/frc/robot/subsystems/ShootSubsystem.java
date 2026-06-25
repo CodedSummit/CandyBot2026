@@ -53,37 +53,23 @@ public class ShootSubsystem extends SubsystemBase {
     setupShuffleboard();
   }
 
-  public boolean shooterMotorRunning() {
-    return (shooterMotor.get() != 0.0);
-  }
-
-  public void stopShooterMotor() {
-    isControllingForRPM = false;
-    shooterPID.reset();
-    shooterMotor.set(0);
-  }
-
   public void startShooting() {
     shooterPID.setSetpoint(getTargetRPM());
     isControllingForRPM = true;
+    isShooting = true;
   }
   public void stopShooting() {
     isControllingForRPM = false;
     shooterPID.reset();
     shooterMotor.set(0);
+    isShooting = false;
   }
 
   public Command toggleShoot() {
     return new ConditionalCommand(
-      new ParallelCommandGroup(
-        new InstantCommand(() -> startShooting()),
-        new InstantCommand(() -> isShooting = false)
-      ),
-      new ParallelCommandGroup(
-        new InstantCommand(() -> stopShooting()),
-        new InstantCommand(() -> isShooting = true)
-      ),
-      () -> isShooting
+      new InstantCommand(() -> startShooting()),
+      new InstantCommand(() -> stopShooting()),
+      () -> !isShooting
     );
   }
 

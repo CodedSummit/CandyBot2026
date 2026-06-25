@@ -16,10 +16,18 @@ public final class Constants {
   public static class OperatorConstants {
     public static final int kDriverControllerPort = 0;
   }
+
   public static class ShooterConstants {
     public static final int kShootMotorCanbusID = 22;
     public static double kShootRPM = 300;
     public static double kFeedForwardGain = 0.6;
     public static double kShootSpeed = 0.45;
+  }
+
+  public static class HopperConstants {
+    public static final int kSpinMotorCanbusID = 11;
+    public static double kSpinPercentage = .2;
+    public static double kSpinGain = 0.6;
+    public static double kSpinSpeed = 0.45;
   }
 }

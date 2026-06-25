@@ -44,20 +44,13 @@ public class ShootSubsystem extends SubsystemBase {
 
   private PIDController shooterPID = new PIDController(0.0001, 0, 0);
   private boolean isControllingForRPM = false;
+  private boolean isShooting = false;
  
   public ShootSubsystem() {
     this.initialize();
   }
   public void initialize() {
     setupShuffleboard();
-  }
-
-  public Command runWheelsWithPID(){
-    return this.startEnd(()-> spinUpWheelsWithPID(), ()-> stopShooting());
-  }
-
-  public void spinUpWheelsWithPID(){
-    isControllingForRPM = true;
   }
 
   public boolean shooterMotorRunning() {
@@ -80,10 +73,18 @@ public class ShootSubsystem extends SubsystemBase {
     shooterMotor.set(0);
   }
 
-  public Command Shoot() {
-    return this.startEnd(
-        () -> shooterMotor.set(getShooterSpeed()), // this is set to negative because the controller is inverted
-        () -> shooterMotor.set(0));
+  public Command toggleShoot() {
+    return new ConditionalCommand(
+      new ParallelCommandGroup(
+        new InstantCommand(() -> startShooting()),
+        new InstantCommand(() -> isShooting = false)
+      ),
+      new ParallelCommandGroup(
+        new InstantCommand(() -> stopShooting()),
+        new InstantCommand(() -> isShooting = true)
+      ),
+      () -> isShooting
+    );
   }
 
   @Override

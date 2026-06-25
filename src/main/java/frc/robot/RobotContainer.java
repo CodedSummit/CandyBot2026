@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
 @Logged
 public class RobotContainer {
   private final ShootSubsystem shootSubsystem = new ShootSubsystem();
+  private boolean shooting = false;
 
   // Replace with CommandPS4Controller or CommandJoystick if needed
   private final CommandXboxController m_driverController =
@@ -44,7 +45,7 @@ public class RobotContainer {
    */
   private void configureBindings() {
     m_driverController.a()
-      .onTrue(new InstantCommand(() -> shootSubsystem.spinUpWheelsWithPID()))
+      .onTrue(new InstantCommand(() -> shootSubsystem.startShooting()))
       .onFalse(new InstantCommand(() -> shootSubsystem.stopShooting()));
   }
 

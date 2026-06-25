@@ -71,7 +71,13 @@ public class ShootSubsystem extends SubsystemBase {
   }
 
   public void startShooting() {
-    shooterMotor.set(getShooterSpeed());
+    shooterPID.setSetpoint(getTargetRPM());
+    isControllingForRPM = true;
+  }
+  public void stopShooting() {
+    isControllingForRPM = false;
+    shooterPID.reset();
+    shooterMotor.set(0);
   }
 
   public Command Shoot() {
@@ -84,28 +90,22 @@ public class ShootSubsystem extends SubsystemBase {
   public void periodic() {
       if(isControllingForRPM){
         double current_rpm = shooterMotor.getEncoder().getVelocity();
-        double target_rpm = getWheelsRPM();
+        double target_rpm = getTargetRPM();
         double velocityFF = target_rpm *(0.0001754 * getGain() * 12); //12 because volt control
 
-        shooterPID.setSetpoint(getWheelsRPM());
+        shooterPID.setSetpoint(getTargetRPM());
         double conveyorPID = shooterPID.calculate(current_rpm);
-        shooterMotor.setVoltage(MathUtil.clamp(velocityFF + conveyorPID, 0, 14));
+        shooterMotor.setVoltage(-MathUtil.clamp(velocityFF + conveyorPID, 0, 14));
       }
   }
 
-  public void stopShooting() {
-    isControllingForRPM = false;
-    shooterPID.reset();
-    shooterMotor.set(0);
-  }
-
   public double getGain() {
-    return nt_shooterGainRPM.getDouble(Constants.ShooterConstants.kGainRPM);
+    return nt_shooterGainRPM.getDouble(Constants.ShooterConstants.kFeedForwardGain);
   }
   public double getShooterSpeed() {
     return nt_shooterSpeed.getDouble(Constants.ShooterConstants.kShootSpeed);
   }
-  public double getWheelsRPM() {
+  public double getTargetRPM() {
     return nt_shooterRPM.getDouble(Constants.ShooterConstants.kShootRPM);
   }
 
@@ -118,7 +118,7 @@ public class ShootSubsystem extends SubsystemBase {
         .withProperties(Map.of("min", 0, "max", 1))
         .getEntry();
 
-    nt_shooterGainRPM = tab.addPersistent("RPM Gain", Constants.ShooterConstants.kGainRPM)
+    nt_shooterGainRPM = tab.addPersistent("Feed Forward Gain", Constants.ShooterConstants.kFeedForwardGain)
     .getEntry();
 
     nt_shooterRPM = tab.addPersistent("Shooter RPM", Constants.ShooterConstants.kShootRPM)

@@ -4,14 +4,15 @@
 
 package frc.robot;
 
-import frc.robot.Constants.HopperConstants;
 import frc.robot.Constants.OperatorConstants;
-import frc.robot.commands.Autos;
+import frc.robot.subsystems.DriveSubsystem;
 import frc.robot.subsystems.HopperSubsystem;
 import frc.robot.subsystems.ShootSubsystem;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.epilogue.Logged;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.InstantCommand;
+import edu.wpi.first.wpilibj2.command.RunCommand;
 import edu.wpi.first.wpilibj2.command.ParallelCommandGroup;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
@@ -24,6 +25,11 @@ import edu.wpi.first.wpilibj2.command.button.Trigger;
  */
 @Logged
 public class RobotContainer {
+  private final DriveSubsystem m_robotDrive = new DriveSubsystem();
+
+  private final SlewRateLimiter throttleLimiter = new SlewRateLimiter(2);
+  private final SlewRateLimiter rotationLimiter = new SlewRateLimiter(3);
+
   private final ShootSubsystem shootSubsystem = new ShootSubsystem();
   private final HopperSubsystem hopperSubsystem = new HopperSubsystem();
 
@@ -35,6 +41,16 @@ public class RobotContainer {
   public RobotContainer() {
     // Configure the trigger bindings
     configureBindings();
+    
+    m_robotDrive.setDefaultCommand(
+      new RunCommand(
+        () -> m_robotDrive.curvatureDrive(
+          rotationLimiter.calculate(m_robotDrive.squareInput(m_driverController.getRightX())),
+          throttleLimiter.calculate(m_robotDrive.squareInput(m_driverController.getLeftY())),
+          true
+        ), m_robotDrive
+      )
+    );
   }
 
   /**
@@ -51,7 +67,13 @@ public class RobotContainer {
       shootSubsystem.toggleShoot(),
       hopperSubsystem.toggleSpin()
     ));
-    m_driverController.b().onTrue(hopperSubsystem.toggleSpin());
+    
+    m_driverController.rightTrigger()
+        .onTrue(new InstantCommand(() -> m_robotDrive.setMaxOutput(1.25)))
+        .onFalse(new InstantCommand(() -> m_robotDrive.setMaxOutput(1)));
+    m_driverController.leftTrigger()
+      .onTrue(new InstantCommand(() -> m_robotDrive.setMaxOutput(.5)))
+      .onFalse(new InstantCommand(() -> m_robotDrive.setMaxOutput(1)));
   }
 
   /**
